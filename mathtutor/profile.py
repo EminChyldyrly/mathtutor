@@ -63,11 +63,19 @@ class Profile:
                 m = float(v["mastery"])
                 if not 0.0 <= m <= 1.0:
                     raise ValueError(f"освоение вне [0, 1]: {m}")
-                prof.topics[tid] = TopicStats(m, int(v["attempts"]), int(v["correct"]))
+                attempts, correct = int(v["attempts"]), int(v["correct"])
+                if not 0 <= correct <= attempts:
+                    raise ValueError(f"неверные счётчики по теме {tid}")
+                prof.topics[tid] = TopicStats(m, attempts, correct)
             prof.errors = {str(k): int(v) for k, v in data["errors"].items()}
-            prof.history = list(data["history"])
+            if any(count < 0 for count in prof.errors.values()):
+                raise ValueError("отрицательный счётчик ошибок")
+            history = data["history"]
+            if not isinstance(history, list) or any(not isinstance(item, dict) for item in history):
+                raise ValueError("история должна быть списком записей")
+            prof.history = history[-HISTORY_LIMIT:]
             return prof
-        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        except (KeyError, TypeError, ValueError, OverflowError, AttributeError) as exc:
             raise ProfileError(f"неверный формат профиля: {exc}") from exc
 
     def save(self, path: str | Path) -> None:

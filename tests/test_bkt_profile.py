@@ -136,6 +136,17 @@ class ProfileTests(unittest.TestCase):
             with self.assertRaises(ProfileError, msg=str(data)[:60]):
                 Profile.from_json(data)
 
+    def test_invalid_history_and_counters_are_rejected(self):
+        data = Profile().to_json()
+        data["history"] = {"unexpected": "mapping"}
+        with self.assertRaises(ProfileError):
+            Profile.from_json(data)
+
+        data = Profile().to_json()
+        next(iter(data["topics"].values()))["correct"] = 1
+        with self.assertRaises(ProfileError):
+            Profile.from_json(data)
+
     def test_save_is_atomic_and_leaves_no_temp_files(self):
         p = Profile()
         p.save(self.path)
